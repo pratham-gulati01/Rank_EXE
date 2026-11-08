@@ -740,7 +740,7 @@ function YourResults({ challenge, session, onCreateOwn }: { challenge: Challenge
       <div className="results-heading">
         <div className="results-heading-main">
           <span className="success-mark">✓</span>
-          <div>
+          <div className="results-heading-text">
             <span className="eyebrow">GAME COMPLETE</span>
             <h2>Results</h2>
             <p className="results-option">My rankings</p>
@@ -969,9 +969,11 @@ function EveryoneResults({ challenge, results, onCreateOwn }: { challenge: Chall
     <div className="results-card community-results">
       <div className="results-heading">
         <div className="results-heading-main">
-          <span className="eyebrow">COMMUNITY</span>
-          <h2>Results</h2>
-          <p className="results-option">All rankings · {results?.plays ?? 0} plays</p>
+          <div className="results-heading-text">
+            <span className="eyebrow">COMMUNITY</span>
+            <h2>Results</h2>
+            <p className="results-option">All rankings · {results?.plays ?? 0} plays</p>
+          </div>
         </div>
         <button type="button" className="results-create-own-btn" onClick={onCreateOwn} title="Create your own RANK.EXE game">
           <span className="create-own-icon">✨</span>

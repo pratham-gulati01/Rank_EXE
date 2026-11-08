@@ -1138,15 +1138,40 @@ html.setup-no-scroll,body.setup-no-scroll,body.setup-no-scroll #root{height:100%
 /* Results: Create your own CTAs */
 .results-card .results-heading {
   display: flex !important;
-  align-items: flex-start !important;
+  align-items: center !important;
   justify-content: space-between !important;
-  gap: 10px !important;
+  gap: 12px !important;
+  margin-bottom: 8px !important;
 }
 .results-heading-main {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   min-width: 0;
+  flex: 1;
+}
+.results-heading-text {
+  display: flex;
+  flex-direction: column;
+}
+.results-heading-text .eyebrow {
+  margin-bottom: 2px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #7899d7;
+}
+.results-heading-text h2 {
+  margin: 0 !important;
+  font-size: 22px !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.03em !important;
+  color: #ffffff;
+}
+.results-heading-text .results-option {
+  margin: 3px 0 0 !important;
+  font-size: 11px !important;
+  color: #94a3b8 !important;
 }
 .results-create-own-btn {
   display: inline-flex !important;
