@@ -171,7 +171,7 @@ function ArrowMiniIcon() {
   );
 }
 
-export const SetupApp = () => {
+export const SetupApp = ({ onBack }: { onBack?: () => void } = {}) => {
   const pendingSetup = readPendingSetup();
   const [selectedMode, setSelectedMode] = useState<GameMode | null>(() => pendingSetup?.mode ?? null);
   const [mode, setMode] = useState<GameMode | null>(() => pendingSetup?.mode ?? null);
@@ -402,6 +402,16 @@ export const SetupApp = () => {
     return (
       <main className="setup-shell setup-mode-shell">
         <header className="setup-brand">
+          {onBack && (
+            <button
+              type="button"
+              className="setup-back-btn inline-back-btn"
+              onClick={onBack}
+              aria-label="Back to game"
+            >
+              ← Back
+            </button>
+          )}
           <span className="brand-mark">R</span>
           <span>RANK<span className="accent">.EXE</span></span>
           <span className="setup-label">GAME SETUP</span>

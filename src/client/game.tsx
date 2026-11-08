@@ -1,8 +1,9 @@
 import './index.css';
 import { useEffect, useMemo, useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { navigateTo } from '@devvit/web/client';
+import { getWebViewMode, navigateTo, requestExpandedMode } from '@devvit/web/client';
+import { SetupApp } from './setup';
 import { isVideoUrl } from '../shared/game';
 import type { Challenge, ChallengeEntry, GameMode } from '../shared/game';
 
@@ -32,6 +33,7 @@ export const App = ({ initialChallenge, initialSubreddit }: { initialChallenge?:
   const [results, setResults] = useState<{ plays: number; totals: Record<string, string> } | null>(null);
   const [loading, setLoading] = useState(!initialChallenge);
   const [notice, setNotice] = useState('');
+  const [creatingGame, setCreatingGame] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -81,21 +83,37 @@ export const App = ({ initialChallenge, initialSubreddit }: { initialChallenge?:
     }
   }, [challengeId, session?.status, tab]);
 
+  if (creatingGame) {
+    return <SetupApp onBack={() => setCreatingGame(false)} />;
+  }
+
+  const handleCreateOwn = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    try {
+      if (getWebViewMode() === 'inline') {
+        requestExpandedMode(event.nativeEvent, 'setup', { title: 'Create a RANK.EXE game' });
+        return;
+      }
+    } catch {
+      /* Fallback to in-app setup */
+    }
+    setCreatingGame(true);
+  };
+
   return <main className="game-post-shell" style={{ '--game-accent': challenge?.themeColor ?? '#4979D0' } as CSSProperties}>
     <header className="game-post-brand"><span className="brand-mark">R</span><span>RANK<span className="accent">.EXE</span></span><span className="post-kind">GAME POST</span></header>
     {notice && <div className="notice" role="status"><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Dismiss">×</button></div>}
-    {loading ? <div className="game-loading-screen" role="status" aria-live="polite"><div className="loading-brand"><span className="loading-mark">R</span><span>RANK<span className="accent">.EXE</span></span></div><div className="loading-orbit"><i/><i/><i/></div><h1>Opening your game</h1><p>Loading your challenge…</p><div className="loading-skeleton"><span/><span/><span/></div></div> : challenge ? <PlayView challenge={challenge} active={active} session={session} tab={tab} setTab={setTab} results={results} subreddit={subreddit} onNotice={setNotice} onSession={setSession} /> : <div className="empty-state"><h2>Game unavailable</h2><p>{notice || 'This post is not connected to a game.'}</p></div>}
+    {loading ? <div className="game-loading-screen" role="status" aria-live="polite"><div className="loading-brand"><span className="loading-mark">R</span><span>RANK<span className="accent">.EXE</span></span></div><div className="loading-orbit"><i/><i/><i/></div><h1>Opening your game</h1><p>Loading your challenge…</p><div className="loading-skeleton"><span/><span/><span/></div></div> : challenge ? <PlayView challenge={challenge} active={active} session={session} tab={tab} setTab={setTab} results={results} subreddit={subreddit} onNotice={setNotice} onSession={setSession} onCreateOwn={handleCreateOwn} /> : <div className="empty-state"><h2>Game unavailable</h2><p>{notice || 'This post is not connected to a game.'}</p></div>}
   </main>;
 };
 
-function PlayView({ challenge, active, session, tab, setTab, results, subreddit, onNotice, onSession }: { challenge: Challenge; active: boolean; session: Session | null; tab: 'Your Choices' | 'Everyone Played'; setTab: (t: 'Your Choices' | 'Everyone Played') => void; results: { plays: number; totals: Record<string, string> } | null; subreddit?: string; onNotice: (n: string) => void; onSession: (s: Session) => void }) {
+function PlayView({ challenge, active, session, tab, setTab, results, subreddit, onNotice, onSession, onCreateOwn }: { challenge: Challenge; active: boolean; session: Session | null; tab: 'Your Choices' | 'Everyone Played'; setTab: (t: 'Your Choices' | 'Everyone Played') => void; results: { plays: number; totals: Record<string, string> } | null; subreddit?: string; onNotice: (n: string) => void; onSession: (s: Session) => void; onCreateOwn: (e: ReactMouseEvent<HTMLButtonElement>) => void }) {
   const completed = session?.status === 'completed';
   const [commenting, setCommenting] = useState(false);
   const [commented, setCommented] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const postComment = async () => { setCommenting(true); const done = await comment(challenge, onNotice); setCommented(done); setCommenting(false); };
   return <section className="play-page">
-    {!active || !session ? null : completed ? (tab === 'Your Choices' ? <YourResults challenge={challenge} session={session}/> : <EveryoneResults challenge={challenge} results={results}/>) : <GameBoard challenge={challenge} session={session} onSession={onSession} onNotice={onNotice} onComplete={async (values) => { onSession({ ...session, values, status: 'completed' }); setTab('Your Choices'); setShowCompletionModal(true); try { await request(`/api/session/${challenge.id}/complete`, { method: 'POST', body: JSON.stringify({ values }) }); } catch (error) { onNotice(error instanceof Error ? error.message : 'Could not submit.'); } }} />}
+    {!active || !session ? null : completed ? (tab === 'Your Choices' ? <YourResults challenge={challenge} session={session} onCreateOwn={onCreateOwn}/> : <EveryoneResults challenge={challenge} results={results} onCreateOwn={onCreateOwn}/>) : <GameBoard challenge={challenge} session={session} onSession={onSession} onNotice={onNotice} onComplete={async (values) => { onSession({ ...session, values, status: 'completed' }); setTab('Your Choices'); setShowCompletionModal(true); try { await request(`/api/session/${challenge.id}/complete`, { method: 'POST', body: JSON.stringify({ values }) }); } catch (error) { onNotice(error instanceof Error ? error.message : 'Could not submit.'); } }} />}
     {completed && <GameBottomBar tab={tab} setTab={setTab} commenting={commenting} commented={commented} onComment={() => void postComment()}/>}
     {completed && showCompletionModal && typeof document !== 'undefined' && createPortal(
       <GameCompletionModal
@@ -693,7 +711,7 @@ function EntryTile({ entry, large, rankEntry = false }: { entry: ChallengeEntry;
   </div>;
 }
 
-function YourResults({ challenge, session }: { challenge: Challenge; session: Session }) {
+function YourResults({ challenge, session, onCreateOwn }: { challenge: Challenge; session: Session; onCreateOwn: (e: ReactMouseEvent<HTMLButtonElement>) => void }) {
   const byId = Object.fromEntries(challenge.entries.map((e) => [e.id, e]));
   const rows = challenge.mode === 'rank'
     ? Object.entries(session.values).sort((a, b) => Number(a[1]) - Number(b[1])).map(([id, value]) => ({ label: `#${value}`, posNum: `${value}`, entry: byId[id], detail: `Ranked #${value}` }))
@@ -720,12 +738,18 @@ function YourResults({ challenge, session }: { challenge: Challenge; session: Se
   return (
     <div className={`results-card personal-results ${challenge.mode === 'rank' ? 'rank-results' : ''}`}>
       <div className="results-heading">
-        <span className="success-mark">✓</span>
-        <div>
-          <span className="eyebrow">GAME COMPLETE</span>
-          <h2>Results</h2>
-          <p className="results-option">My rankings</p>
+        <div className="results-heading-main">
+          <span className="success-mark">✓</span>
+          <div>
+            <span className="eyebrow">GAME COMPLETE</span>
+            <h2>Results</h2>
+            <p className="results-option">My rankings</p>
+          </div>
         </div>
+        <button type="button" className="results-create-own-btn" onClick={onCreateOwn} title="Create your own RANK.EXE game">
+          <span className="create-own-icon">✨</span>
+          <span>Create your own</span>
+        </button>
       </div>
       <div className="ranking-feed">
         {rows.map((row, index) => (
@@ -743,12 +767,21 @@ function YourResults({ challenge, session }: { challenge: Challenge; session: Se
           <summary>Comment preview</summary>
           <p>{commentPreview}</p>
         </details>
+        <div className="results-footer-card">
+          <div className="results-footer-text">
+            <strong>Create your own challenge</strong>
+            <p>Pick a mode, add items, and challenge the community.</p>
+          </div>
+          <button type="button" className="results-footer-btn" onClick={onCreateOwn}>
+            <span>Create your own →</span>
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-function EveryoneResults({ challenge, results }: { challenge: Challenge; results: { plays: number; totals: Record<string, string> } | null }) {
+function EveryoneResults({ challenge, results, onCreateOwn }: { challenge: Challenge; results: { plays: number; totals: Record<string, string> } | null; onCreateOwn: (e: ReactMouseEvent<HTMLButtonElement>) => void }) {
   const getCount = (key: string) => Number(results?.totals[key] ?? 0);
 
   const getKiss = (entry: ChallengeEntry) => Math.max(getCount(`role:Kiss:${entry.id}`), getCount(`role:${entry.id}:Kiss`));
@@ -935,11 +968,15 @@ function EveryoneResults({ challenge, results }: { challenge: Challenge; results
   return (
     <div className="results-card community-results">
       <div className="results-heading">
-        <div>
+        <div className="results-heading-main">
           <span className="eyebrow">COMMUNITY</span>
           <h2>Results</h2>
           <p className="results-option">All rankings · {results?.plays ?? 0} plays</p>
         </div>
+        <button type="button" className="results-create-own-btn" onClick={onCreateOwn} title="Create your own RANK.EXE game">
+          <span className="create-own-icon">✨</span>
+          <span>Create your own</span>
+        </button>
       </div>
       {results === null ? (
         <div className="empty-state"><p>Loading community results…</p></div>
@@ -1066,6 +1103,15 @@ function EveryoneResults({ challenge, results }: { challenge: Challenge; results
               );
             })}
             <p className="fine-print">Only completed games are counted. Individual players and usernames are never shown.</p>
+            <div className="results-footer-card">
+              <div className="results-footer-text">
+                <strong>Create your own challenge</strong>
+                <p>Pick a mode, add items, and challenge the community.</p>
+              </div>
+              <button type="button" className="results-footer-btn" onClick={onCreateOwn}>
+                <span>Create your own →</span>
+              </button>
+            </div>
           </div>
         </>
       ) : (
@@ -1073,6 +1119,15 @@ function EveryoneResults({ challenge, results }: { challenge: Challenge; results
           <h3>You're the first to finish.</h3>
           <p>Community results will appear after more players complete this challenge.</p>
           <p className="fine-print">Only completed games are counted. Individual players and usernames are never shown.</p>
+          <div className="results-footer-card">
+            <div className="results-footer-text">
+              <strong>Create your own challenge</strong>
+              <p>Pick a mode, add items, and challenge the community.</p>
+            </div>
+            <button type="button" className="results-footer-btn" onClick={onCreateOwn}>
+              <span>Create your own →</span>
+            </button>
+          </div>
         </div>
       )}
     </div>
