@@ -168,13 +168,37 @@ api.post('/publish', async (c) => {
   const now = existingDraft?.createdAt ?? Date.now();
   const challenge: Challenge = { id, title, description: text(input.description, 500), category: text(input.category, 40) || 'Other', mode, ...(themeColor(input.themeColor) ? { themeColor: themeColor(input.themeColor) } : {}), entries, creator: context.username ?? 'Redditor', createdAt: now, status: 'draft', subredditName: context.subredditName };
   await redis.set(challengeKey(id), JSON.stringify(challenge));
+  const ugcDescription = text(input.description, 500);
+  const ugcText = [
+    title,
+    ugcDescription ? `\n\n${ugcDescription}` : '',
+    entries.length > 0 ? `\n\nEntries:\n${entries.map((e, idx) => `${idx + 1}. ${e.text || 'Image entry'}`).join('\n')}` : '',
+  ].join('');
+  const ugcImages = entries
+    .map((e) => e.imageUrl)
+    .filter((url): url is string => Boolean(url && isRedditMedia(url) && !/\.(avi|mp4|webm|mov)(\?|$)/i.test(url)));
+
   let post;
   try {
-    post = await reddit.submitCustomPost({ title: `RANK.EXE: ${title}`.slice(0, 300), subredditName: context.subredditName, entry: 'default', styles: { backgroundColor: '#101114FF', backgroundColorDark: '#101114FF', height: EntrypointHeight.TALL }, postData: { challengeId: id } });
+    post = await reddit.submitCustomPost({
+      title: `RANK.EXE: ${title}`.slice(0, 300),
+      subredditName: context.subredditName,
+      entry: 'default',
+      styles: { backgroundColor: '#101114FF', backgroundColorDark: '#101114FF', height: EntrypointHeight.TALL },
+      postData: { challengeId: id },
+      runAs: 'USER',
+      userGeneratedContent: {
+        text: ugcText,
+        ...(ugcImages.length > 0 ? { imageUrls: ugcImages } : {}),
+      },
+      textFallback: {
+        text: `RANK.EXE: ${title}\n\n${ugcDescription ? `${ugcDescription}\n\n` : ''}Play this game on Reddit!`,
+      },
+    });
   } catch (err) {
     await redis.del(challengeKey(id));
     console.error('Challenge post creation failed', err);
-    return c.json({ error: 'Reddit could not publish this challenge. Check the app permissions and try again.' }, 502);
+    return c.json({ error: 'Reddit could not publish this challenge. Check account authorization and subreddit posting rules, then try again.' }, 502);
   }
   challenge.postId = post.id;
   challenge.status = 'published';
