@@ -181,7 +181,7 @@ api.post('/publish', async (c) => {
   let post;
   try {
     post = await reddit.submitCustomPost({
-      title: `RANK.EXE: ${title}`.slice(0, 300),
+      title: title.slice(0, 300),
       subredditName: context.subredditName,
       entry: 'default',
       styles: { backgroundColor: '#101114FF', backgroundColorDark: '#101114FF', height: EntrypointHeight.TALL },
@@ -192,7 +192,7 @@ api.post('/publish', async (c) => {
         ...(ugcImages.length > 0 ? { imageUrls: ugcImages } : {}),
       },
       textFallback: {
-        text: `RANK.EXE: ${title}\n\n${ugcDescription ? `${ugcDescription}\n\n` : ''}Play this game on Reddit!`,
+        text: `${title}\n\n${ugcDescription ? `${ugcDescription}\n\n` : ''}Play this game on Reddit!`,
       },
     });
   } catch (err) {
@@ -202,6 +202,22 @@ api.post('/publish', async (c) => {
   }
   challenge.postId = post.id;
   challenge.status = 'published';
+
+  // Automatically start a comment thread so player votes nest underneath it
+  try {
+    const starterComment = await reddit.submitComment({
+      id: post.id,
+      text: '💬 **Player Rankings & Votes Thread**\n\nPlay the game above and share your rankings and verdicts here!',
+      runAs: 'APP',
+    });
+    if (starterComment?.id) {
+      challenge.threadCommentId = starterComment.id as `t1_${string}`;
+      await redis.set(`${prefix()}thread-comment:${id}`, starterComment.id);
+    }
+  } catch (err) {
+    console.warn('Could not post automatic starter comment thread:', err);
+  }
+
   try {
     await redis.set(challengeKey(id), JSON.stringify(challenge));
   } catch (err) {
@@ -423,8 +439,38 @@ api.post('/comment/:id', async (c) => {
           : challenge.mode === 'rating'
             ? `⭐ My Ratings:\n` + entries.sort((a, b) => Number(b[1]) - Number(a[1])).map(([entryId, score]) => `⭐ ${byId[entryId]}: ${score}/10`).join('\n')
             : (() => { const champion = String(Object.values(submission.values).at(-1) ?? session.order[0]); return `👑 My Pick is ${byId[champion]} over ${session.order.filter((entryId) => entryId !== champion).map((entryId) => byId[entryId]).join(', ')}.`; })();
+  // Find or lazily create starter comment thread so user rankings nest as replies
+  let threadCommentId = challenge.threadCommentId || ((await redis.get(`${prefix()}thread-comment:${id}`)) as `t1_${string}` | null);
+  if (!threadCommentId && challenge.postId) {
+    try {
+      const starter = await reddit.submitComment({
+        id: challenge.postId,
+        text: '💬 **Player Rankings & Votes Thread**\n\nPlay the game above and share your rankings and verdicts here!',
+        runAs: 'APP',
+      });
+      if (starter?.id) {
+        threadCommentId = starter.id as `t1_${string}`;
+        challenge.threadCommentId = threadCommentId;
+        await redis.set(`${prefix()}thread-comment:${id}`, starter.id);
+        await redis.set(challengeKey(id), JSON.stringify(challenge));
+      }
+    } catch (e) {
+      console.warn('Could not auto-create starter comment thread on comment submission:', e);
+    }
+  }
+
+  const targetParentId = (threadCommentId || challenge.postId) as `t1_${string}` | `t3_${string}`;
   try {
-    const posted = await reddit.submitComment({ id: challenge.postId, text: comment, runAs: 'USER' });
+    let posted;
+    try {
+      posted = await reddit.submitComment({ id: targetParentId, text: comment, runAs: 'USER' });
+    } catch (commentErr) {
+      if (targetParentId !== challenge.postId) {
+        posted = await reddit.submitComment({ id: challenge.postId, text: comment, runAs: 'USER' });
+      } else {
+        throw commentErr;
+      }
+    }
     await redis.set(commentKey, posted.id);
     return c.json({ ok: true, commentId: posted.id });
   } catch (err) {

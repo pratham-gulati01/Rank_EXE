@@ -11,6 +11,7 @@ export type Challenge = {
   creator: string;
   createdAt: number;
   postId?: `t3_${string}`;
+  threadCommentId?: `t1_${string}`;
   status: 'draft' | 'published';
   subredditName?: string;
 };
