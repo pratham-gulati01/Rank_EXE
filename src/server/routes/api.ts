@@ -68,8 +68,13 @@ api.post('/media', async (c) => {
   const validMediaDataUrl = (value: string): boolean =>
     /^data:(?:image\/[a-z0-9.+-]+|video\/[a-z0-9.+-]+|application\/octet-stream);base64,[a-z0-9+/_\r\n=-]+$/i.test(value) ||
     /^https?:\/\/.+/i.test(value);
-  if (dataUrls.length < 1 || dataUrls.length > 30 || dataUrls.some((value) => !validMediaDataUrl(value)) || dataUrls.reduce((sum, value) => sum + value.length, 0) > 27_000_000) {
-    return c.json({ error: 'Choose up to 30 PNG, JPEG, WEBP, GIF, AVIF, or AVI files under 18 MB total.' }, 400);
+  if (
+    dataUrls.length < 1 ||
+    dataUrls.length > 30 ||
+    dataUrls.some((value) => !validMediaDataUrl(value)) ||
+    dataUrls.some((value) => value.length > 32_000_000)
+  ) {
+    return c.json({ error: 'Choose PNG, JPEG, WEBP, GIF, AVIF, or AVI files under 20 MB each.' }, 400);
   }
   const isGifUrl = (url: string) => /^data:image\/(?:gif|x-gif)/i.test(url) || /\.gif(\?|$)/i.test(url);
   const isVideoUrl = (url: string) =>
@@ -482,20 +487,23 @@ api.post('/comment/:id', async (c) => {
 
 api.post('/subscribe', async (c) => {
   let subName = context.subredditName;
-  if (!subName) {
-    try {
-      const sub = await reddit.getCurrentSubreddit();
-      subName = sub?.name;
-    } catch {
-      /* ignore */
-    }
-  }
-  const resolvedSub = subName ?? 'Rank_EXE';
   try {
     await reddit.subscribeToCurrentSubreddit();
-    return c.json({ ok: true, subreddit: resolvedSub });
+    if (!subName) {
+      try {
+        const sub = await reddit.getCurrentSubreddit();
+        subName = sub?.name;
+      } catch {
+        /* ignore */
+      }
+    }
+    return c.json({ status: 'success', ok: true, subreddit: subName ?? 'Rank_EXE' });
   } catch (err) {
-    console.warn('Subreddit subscribe warning', err);
-    return c.json({ ok: false, subreddit: resolvedSub });
+    console.error('Failed to subscribe to current subreddit:', err);
+    return c.json({
+      status: 'error',
+      ok: false,
+      message: err instanceof Error ? err.message : 'Failed to subscribe',
+    }, 500);
   }
 });

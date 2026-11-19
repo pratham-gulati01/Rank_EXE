@@ -2,7 +2,7 @@ import './index.css';
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { getWebViewMode, navigateTo, requestExpandedMode } from '@devvit/web/client';
+import { getWebViewMode, requestExpandedMode } from '@devvit/web/client';
 import { SetupApp } from './setup';
 import { isVideoUrl } from '../shared/game';
 import type { Challenge, ChallengeEntry, GameMode } from '../shared/game';
@@ -216,18 +216,20 @@ function GameCompletionModal({
     if (joining || joined) return;
     setJoining(true);
     try {
-      const res = await request<{ ok: boolean; subreddit?: string }>('/api/subscribe', { method: 'POST', body: '{}' });
-      const targetSub = res.subreddit || activeSubreddit;
-      if (res.subreddit) setJoinedSubreddit(res.subreddit);
-      setJoined(true);
-      onNotice(`Joined r/${targetSub}! 🎉`);
-    } catch {
-      try {
-        navigateTo(`https://www.reddit.com/r/${activeSubreddit}`);
+      const res = await fetch('/api/subscribe', { method: 'POST' });
+      const data = (await res.json()) as { status?: string; ok?: boolean; message?: string; subreddit?: string };
+
+      if (res.ok && (data.status === 'success' || data.ok)) {
+        const targetSub = data.subreddit || activeSubreddit;
+        if (data.subreddit) setJoinedSubreddit(data.subreddit);
         setJoined(true);
-      } catch {
-        onNotice(`Visit r/${activeSubreddit} to join!`);
+        onNotice(`Subscribed to r/${targetSub}! 🎉`);
+      } else {
+        throw new Error(data.message || 'Failed to subscribe');
       }
+    } catch (err) {
+      console.error('Subreddit subscribe error:', err);
+      onNotice(err instanceof Error ? err.message : 'Failed to subscribe');
     } finally {
       setJoining(false);
     }
@@ -256,8 +258,9 @@ function GameCompletionModal({
 
         <button
           type="button"
+          id="subscribe-btn"
           className={`completion-secondary-cta ${joined ? 'joined' : ''}`}
-          disabled={joining}
+          disabled={joining || joined}
           onClick={() => void handleJoin()}
         >
           <CommunityIcon />
