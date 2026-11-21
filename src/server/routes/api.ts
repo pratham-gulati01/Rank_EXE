@@ -74,12 +74,12 @@ api.post('/media', async (c) => {
     dataUrls.some((value) => !validMediaDataUrl(value)) ||
     dataUrls.some((value) => value.length > 32_000_000)
   ) {
-    return c.json({ error: 'Choose PNG, JPEG, WEBP, GIF, AVIF, or AVI files under 20 MB each.' }, 400);
+    return c.json({ error: 'Choose images or videos under 20 MB each.' }, 400);
   }
   const isGifUrl = (url: string) => /^data:image\/(?:gif|x-gif)/i.test(url) || /\.gif(\?|$)/i.test(url);
   const isVideoUrl = (url: string) =>
     /^data:video\//i.test(url) ||
-    /\.(avi|mp4|webm|mov|mkv)(\?|$)/i.test(url) ||
+    /\.(avi|mp4|webm|mov|mkv|m4v|3gp|flv|wmv)(\?|$)/i.test(url) ||
     url.includes('v.redd.it');
   const getMediaType = (url: string): 'image' | 'gif' | 'video' => {
     if (typeof body.type === 'string' && ['image', 'gif', 'video'].includes(body.type)) {
@@ -151,7 +151,7 @@ api.post('/publish', async (c) => {
     if (entry.imageUrl && !isRedditMedia(entry.imageUrl)) {
       try {
         const isGif = /\.gif(\?|$)/i.test(entry.imageUrl) || entry.imageUrl.includes('gif');
-        const isVid = /\.(avi|mp4|webm|mov)(\?|$)/i.test(entry.imageUrl) || entry.imageUrl.includes('v.redd.it');
+        const isVid = /\.(avi|mp4|webm|mov|mkv|m4v)(\?|$)/i.test(entry.imageUrl) || entry.imageUrl.includes('v.redd.it');
         const rehosted = await media.upload({ url: entry.imageUrl, type: isVid ? 'video' : isGif ? 'gif' : 'image' });
         entry.imageUrl = rehosted.mediaUrl;
       } catch (rehostErr) {
@@ -181,7 +181,7 @@ api.post('/publish', async (c) => {
   ].join('');
   const ugcImages = entries
     .map((e) => e.imageUrl)
-    .filter((url): url is string => Boolean(url && isRedditMedia(url) && !/\.(avi|mp4|webm|mov)(\?|$)/i.test(url)));
+    .filter((url): url is string => Boolean(url && isRedditMedia(url) && !/\.(avi|mp4|webm|mov|mkv|m4v)(\?|$)/i.test(url)));
 
   let post;
   try {

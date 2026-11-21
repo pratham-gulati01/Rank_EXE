@@ -33,7 +33,7 @@ export const validEntryCount = (mode: GameMode, count: number): boolean => count
 export const isVideoUrl = (url?: string): boolean => {
   if (!url) return false;
   return (
-    /\.(avi|mp4|webm|mov|mkv)(\?|$)/i.test(url) ||
+    /\.(avi|mp4|webm|mov|mkv|m4v|3gp|flv|wmv)(\?|$)/i.test(url) ||
     url.startsWith('data:video/') ||
     url.includes('v.redd.it')
   );

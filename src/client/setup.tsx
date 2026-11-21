@@ -20,16 +20,17 @@ const isGifFile = (file: File) =>
   file.type === 'image/x-gif' ||
   /\.gif$/i.test(file.name);
 
-const isAviFile = (file: File) =>
-  /\.avi$/i.test(file.name) ||
-  ['video/x-msvideo', 'video/avi', 'video/msvideo'].includes(file.type);
+const isVideoFile = (file: File) =>
+  file.type.startsWith('video/') ||
+  /\.(avi|mp4|webm|mov|mkv|m4v|3gp|flv|wmv)$/i.test(file.name);
 
-const isAvifFile = (file: File) =>
-  /\.avif$/i.test(file.name) ||
-  file.type === 'image/avif';
+const isMediaFile = (file: File) =>
+  file.type.startsWith('image/') ||
+  file.type.startsWith('video/') ||
+  /\.(png|jpe?g|webp|gif|avif|bmp|svg|tiff?|heic|heif|ico|jfif|pjpeg|pjp|avi|mp4|webm|mov|mkv|m4v|3gp|flv|wmv)$/i.test(file.name);
 
 const prepareImage = async (file: File): Promise<string> => {
-  if (isGifFile(file) || isAviFile(file)) {
+  if (isGifFile(file) || isVideoFile(file)) {
     return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
@@ -45,7 +46,8 @@ const prepareImage = async (file: File): Promise<string> => {
     canvas.height = Math.max(1, Math.round(bitmap.height * scale));
     canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close();
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', 0.82));
+    const mime = file.type === 'image/png' ? 'image/png' : 'image/webp';
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mime, 0.85));
     if (blob && blob.size < file.size) return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () => reject(new Error(`Could not prepare ${file.name}.`));
@@ -260,10 +262,8 @@ export const SetupApp = ({ onBack }: { onBack?: () => void } = {}) => {
   const uploadImages = async (selected: FileList | null) => {
     const files = Array.from(selected ?? []);
     if (!files.length) return;
-    const allowed = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/x-gif', 'image/avif', 'video/x-msvideo', 'video/avi', 'video/msvideo', 'video/mp4'];
-    const isAllowed = (file: File) => allowed.includes(file.type) || isGifFile(file) || isAviFile(file) || isAvifFile(file) || /\.(png|jpe?g|webp|gif|avif|avi|mp4)$/i.test(file.name);
-    if (files.some((file) => !isAllowed(file))) { setNotice('Choose PNG, JPEG, WEBP, GIF, AVIF, or AVI files.'); return; }
-    if (files.some((file) => file.size > 20 * 1024 * 1024)) { setNotice('Choose images, GIFs, AVIF, or AVI videos under 20 MB each.'); return; }
+    if (files.some((file) => !isMediaFile(file))) { setNotice('Choose valid image or video files.'); return; }
+    if (files.some((file) => file.size > 20 * 1024 * 1024)) { setNotice('Choose images or videos under 20 MB each.'); return; }
     const available = maxEntries - completeEntries.length;
     const toUpload = files.slice(0, Math.max(available, 0));
     if (!toUpload.length) { setNotice(`This game already has ${maxEntries} items.`); return; }
@@ -286,7 +286,7 @@ export const SetupApp = ({ onBack }: { onBack?: () => void } = {}) => {
             activeUploads += 1;
             setUploadStatus('Uploading images…');
             setUploadProgress({ done: uploaded, total: toUpload.length, active: activeUploads });
-            const mediaType = isAviFile(file) ? 'video' : isGifFile(file) ? 'gif' : 'image';
+            const mediaType = isVideoFile(file) ? 'video' : isGifFile(file) ? 'gif' : 'image';
             const result = await request<{ imageUrl: string }>('/api/media', { method: 'POST', body: JSON.stringify({ dataUrl, type: mediaType }) });
             imageUrls[index] = result.imageUrl;
           } catch (uploadError) {
@@ -302,7 +302,7 @@ export const SetupApp = ({ onBack }: { onBack?: () => void } = {}) => {
         .map((file, index) => ({ file, url: imageUrls[index] }))
         .filter((item): item is { file: File; url: string } => Boolean(item.url));
       if (successfulImages.length === 0) {
-        throw new Error('Upload failed. Try a smaller image, GIF, or AVI video.');
+        throw new Error('Upload failed. Try a smaller image or video under 20 MB.');
       }
       const incoming = successfulImages.map(({ file, url }, index) => ({
         id: makeId(),
@@ -333,15 +333,13 @@ export const SetupApp = ({ onBack }: { onBack?: () => void } = {}) => {
   };
 
   const uploadSingleImage = async (entryId: string, file: File) => {
-    const allowed = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/x-gif', 'image/avif', 'video/x-msvideo', 'video/avi', 'video/msvideo', 'video/mp4'];
-    const isAllowed = allowed.includes(file.type) || isGifFile(file) || isAviFile(file) || isAvifFile(file) || /\.(png|jpe?g|webp|gif|avif|avi|mp4)$/i.test(file.name);
-    if (!isAllowed) { setNotice('Choose PNG, JPEG, WEBP, GIF, AVIF, or AVI files.'); return; }
+    if (!isMediaFile(file)) { setNotice('Choose a valid image or video file.'); return; }
     if (file.size > 20 * 1024 * 1024) { setNotice('Choose media under 20 MB.'); return; }
     setBusy(true);
     setNotice('Uploading media…');
     try {
       const dataUrl = await prepareImage(file);
-      const mediaType = isAviFile(file) ? 'video' : isGifFile(file) ? 'gif' : 'image';
+      const mediaType = isVideoFile(file) ? 'video' : isGifFile(file) ? 'gif' : 'image';
       const result = await request<{ imageUrl: string }>('/api/media', { method: 'POST', body: JSON.stringify({ dataUrl, type: mediaType }) });
       const defaultText = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').slice(0, 180);
       setEntries((current) => current.map((entry) => entry.id === entryId ? {
@@ -653,7 +651,7 @@ export const SetupApp = ({ onBack }: { onBack?: () => void } = {}) => {
               <span className="toolbar-subtitle">Upload</span>
               <input
                 type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif,image/avif,video/x-msvideo,video/avi,video/msvideo,video/mp4,video/*,image/*,.avif,.avi,.gif,.png,.jpg,.jpeg,.webp"
+                accept="image/*,video/*"
                 multiple
                 disabled={busy || completeEntries.length >= maxEntries}
                 onChange={(event) => { void uploadImages(event.currentTarget.files); event.currentTarget.value = ''; }}
@@ -770,7 +768,7 @@ export const SetupApp = ({ onBack }: { onBack?: () => void } = {}) => {
                     <PhotoAttachmentIcon />
                     <input
                       type="file"
-                      accept="image/png,image/jpeg,image/webp,image/gif,image/avif,video/x-msvideo,video/avi,video/msvideo,video/mp4,video/*,image/*"
+                      accept="image/*,video/*"
                       disabled={busy}
                       onChange={(event) => {
                         const file = event.currentTarget.files?.[0];

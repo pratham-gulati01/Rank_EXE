@@ -1155,6 +1155,7 @@ html.setup-no-scroll,body.setup-no-scroll,body.setup-no-scroll #root{height:100%
   flex-direction: column !important;
   align-items: flex-start !important;
   justify-content: center !important;
+  text-align: left !important;
   min-width: 0 !important;
 }
 .results-heading-text .eyebrow {
@@ -1165,6 +1166,7 @@ html.setup-no-scroll,body.setup-no-scroll,body.setup-no-scroll #root{height:100%
   letter-spacing: 0.12em !important;
   color: #7899d7 !important;
   line-height: 1.2 !important;
+  text-align: left !important;
 }
 .results-heading-text h2 {
   display: block !important;
@@ -1174,6 +1176,7 @@ html.setup-no-scroll,body.setup-no-scroll,body.setup-no-scroll #root{height:100%
   line-height: 1.15 !important;
   letter-spacing: -0.03em !important;
   color: #ffffff !important;
+  text-align: left !important;
 }
 .results-heading-text .results-option {
   display: block !important;
@@ -1182,6 +1185,7 @@ html.setup-no-scroll,body.setup-no-scroll,body.setup-no-scroll #root{height:100%
   font-size: 11px !important;
   color: #94a3b8 !important;
   line-height: 1.2 !important;
+  text-align: left !important;
 }
 .results-create-own-btn {
   display: inline-flex !important;

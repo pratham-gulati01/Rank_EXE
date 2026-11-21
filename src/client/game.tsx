@@ -743,10 +743,10 @@ function YourResults({ challenge, session, onCreateOwn }: { challenge: Challenge
       <div className="results-heading">
         <div className="results-heading-main">
           <span className="success-mark">✓</span>
-          <div className="results-heading-text" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-            <span className="eyebrow" style={{ display: 'block', margin: '0 0 2px 0' }}>GAME COMPLETE</span>
-            <h2 style={{ margin: 0, padding: 0 }}>Results</h2>
-            <p className="results-option" style={{ margin: '3px 0 0 0', padding: 0 }}>My rankings</p>
+          <div className="results-heading-text" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', minWidth: 0 }}>
+            <span className="eyebrow" style={{ display: 'block', margin: '0 0 2px 0', textAlign: 'left' }}>GAME COMPLETE</span>
+            <h2 style={{ display: 'block', margin: 0, padding: 0, textAlign: 'left' }}>Results</h2>
+            <p className="results-option" style={{ display: 'block', margin: '3px 0 0 0', padding: 0, textAlign: 'left' }}>My rankings</p>
           </div>
         </div>
         <button type="button" className="results-create-own-btn" onClick={onCreateOwn} title="Create your own RANK.EXE game">
@@ -972,10 +972,10 @@ function EveryoneResults({ challenge, results, onCreateOwn }: { challenge: Chall
     <div className="results-card community-results">
       <div className="results-heading">
         <div className="results-heading-main">
-          <div className="results-heading-text" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-            <span className="eyebrow" style={{ display: 'block', margin: '0 0 2px 0' }}>COMMUNITY</span>
-            <h2 style={{ margin: 0, padding: 0 }}>Results</h2>
-            <p className="results-option" style={{ margin: '3px 0 0 0', padding: 0 }}>All rankings · {results?.plays ?? 0} plays</p>
+          <div className="results-heading-text" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', minWidth: 0 }}>
+            <span className="eyebrow" style={{ display: 'block', margin: '0 0 2px 0', textAlign: 'left' }}>COMMUNITY</span>
+            <h2 style={{ display: 'block', margin: 0, padding: 0, textAlign: 'left' }}>Results</h2>
+            <p className="results-option" style={{ display: 'block', margin: '3px 0 0 0', padding: 0, textAlign: 'left' }}>All rankings · {results?.plays ?? 0} plays</p>
           </div>
         </div>
         <button type="button" className="results-create-own-btn" onClick={onCreateOwn} title="Create your own RANK.EXE game">
