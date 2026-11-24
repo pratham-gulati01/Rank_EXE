@@ -125,7 +125,7 @@ api.post('/drafts', async (c) => {
     const entry = row && typeof row === 'object' ? row as Record<string, unknown> : {};
     return { id: text(entry.id, 80) || `e${index + 1}`, text: text(entry.text, 180), ...(text(entry.imageUrl, 500) ? { imageUrl: text(entry.imageUrl, 500) } : {}) };
   });
-  const draft: Challenge = { id: draftId, title: text(input.title, 80) || 'Untitled draft', description: text(input.description, 500), category: text(input.category, 40) || 'Other', mode, ...(themeColor(input.themeColor) ? { themeColor: themeColor(input.themeColor) } : {}), entries, creator: context.username ?? 'Redditor', createdAt: Date.now(), status: 'draft' };
+  const draft: Challenge = { id: draftId, title: text(input.title, 80) || (mode && MODE_LABELS[mode] ? MODE_LABELS[mode] : 'Game'), description: text(input.description, 500), category: text(input.category, 40) || 'Other', mode, ...(themeColor(input.themeColor) ? { themeColor: themeColor(input.themeColor) } : {}), entries, creator: context.username ?? 'Redditor', createdAt: Date.now(), status: 'draft' };
   const key = `${prefix()}drafts:${user}`;
   await redis.hSet(key, { [draftId]: JSON.stringify(draft) });
   await redis.expire(key, identityTtl);

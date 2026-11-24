@@ -177,7 +177,11 @@ export const SetupApp = ({ onBack }: { onBack?: () => void } = {}) => {
   const pendingSetup = readPendingSetup();
   const [selectedMode, setSelectedMode] = useState<GameMode | null>(() => pendingSetup?.mode ?? null);
   const [mode, setMode] = useState<GameMode | null>(() => pendingSetup?.mode ?? null);
-  const [title, setTitle] = useState(() => pendingSetup?.draft ? pendingSetup.draft.title === 'Untitled draft' ? '' : pendingSetup.draft.title : '');
+  const [title, setTitle] = useState(() => {
+    if (!pendingSetup?.draft) return '';
+    const draftTitle = pendingSetup.draft.title;
+    return draftTitle === 'Untitled draft' || draftTitle === MODE_LABELS[pendingSetup.draft.mode] ? '' : draftTitle;
+  });
   const [description, setDescription] = useState(() => pendingSetup?.draft?.description ?? '');
   const [category, setCategory] = useState(() => pendingSetup?.draft?.category ?? 'Pop culture');
   const [entries, setEntries] = useState<ChallengeEntry[]>(() => pendingSetup?.draft?.entries.length ? pendingSetup.draft.entries.slice(0, MAX_ENTRIES_BY_MODE[pendingSetup.draft.mode]) : pendingSetup ? Array.from({ length: MIN_ENTRIES[pendingSetup.mode] }, () => ({ id: makeId(), text: '' })) : []);
@@ -247,7 +251,7 @@ export const SetupApp = ({ onBack }: { onBack?: () => void } = {}) => {
     setSelectedMode(draft.mode);
     setDraftId(draft.id);
     setMode(draft.mode);
-    setTitle(draft.title === 'Untitled draft' ? '' : draft.title);
+    setTitle(draft.title === 'Untitled draft' || draft.title === MODE_LABELS[draft.mode] ? '' : draft.title);
     setDescription(draft.description);
     setCategory(draft.category);
     setThemeEnabled(Boolean(draft.themeColor));
