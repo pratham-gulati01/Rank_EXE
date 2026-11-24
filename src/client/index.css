@@ -202,7 +202,8 @@ html,body,#root{height:100%;width:100%;margin:0;padding:0;box-sizing:border-box;
 .kmk-role-badge.marry-badge{background:#1f334d!important;color:#a2c6fa!important;border:1px solid #325078!important}
 .kmk-role-badge.kill-badge{background:#3a1f24!important;color:#fca5b0!important;border:1px solid #5a3038!important}
 .ranking-avg-badge,.ranking-row-label,.fact-cap-badge,.rating-badge{font-size:10.5px!important;font-weight:800!important;color:#94c0f8!important;background:#17293d!important;padding:2.5px 7px!important;border-radius:5px!important;border:1px solid #284466!important;white-space:nowrap!important;align-self:center!important}
-.fact-cap-badge{background:#153729!important;color:#6ee7b7!important;border:1px solid #245842!important}
+.ranking-avg-badge.fact-badge,.fact-cap-badge{background:#153729!important;color:#6ee7b7!important;border:1px solid #245842!important}
+.ranking-avg-badge.cap-badge{background:#172847!important;color:#93c5fd!important;border:1px solid #294676!important}
 .rating-badge{color:#fde047!important;background:#2d2410!important;border:1px solid #6b531a!important}
 .results-card .community-list{grid-template-columns:1fr;gap:6px}
 .result-highlights{margin-bottom:6px;padding:6px 10px;font-size:10px;line-height:1.35;font-weight:600}

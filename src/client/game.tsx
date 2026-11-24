@@ -876,10 +876,10 @@ function EveryoneResults({ challenge, results, onCreateOwn }: { challenge: Chall
         if (challenge.mode === 'fact_cap') {
           const aFact = getFact(a); const aCap = getCap(a); const aTotal = aFact + aCap;
           const bFact = getFact(b); const bCap = getCap(b); const bTotal = bFact + bCap;
-          const aPct = aTotal > 0 ? aFact / aTotal : 0;
-          const bPct = bTotal > 0 ? bFact / bTotal : 0;
-          if (bPct !== aPct) return bPct - aPct;
-          return bFact - aFact;
+          const aTop = Math.max(aFact, aCap);
+          const bTop = Math.max(bFact, bCap);
+          if (bTop !== aTop) return bTop - aTop;
+          return bTotal - aTotal;
         }
         if (challenge.mode === 'rating') {
           const aAvg = getRatingAvg(a);
@@ -895,14 +895,33 @@ function EveryoneResults({ challenge, results, onCreateOwn }: { challenge: Chall
 
   const getFactCapHighlight = () => {
     if (challenge.entries.length === 0) return '—';
-    const sortedByFact = [...challenge.entries].sort((a, b) => getFact(b) - getFact(a));
-    const sortedByCap = [...challenge.entries].sort((a, b) => getCap(b) - getCap(a));
-    const topFact = sortedByFact[0];
-    const topCap = sortedByCap[0];
-    const factCalls = topFact ? getFact(topFact) : 0;
-    const capCalls = topCap ? getCap(topCap) : 0;
-    if (factCalls === 0 && capCalls === 0) return 'No calls yet';
-    return `✅ Most Fact: ${topFact?.text ?? '—'} (${factCalls} votes) · 🧢 Biggest Cap: ${topCap?.text ?? '—'} (${capCalls} votes)`;
+    let bestEntry = challenge.entries[0];
+    let topFact = 0;
+    let topCap = 0;
+    let maxVotes = -1;
+
+    for (const entry of challenge.entries) {
+      const f = getFact(entry);
+      const c = getCap(entry);
+      const top = Math.max(f, c);
+      if (top > maxVotes) {
+        maxVotes = top;
+        bestEntry = entry;
+        topFact = f;
+        topCap = c;
+      }
+    }
+
+    if (maxVotes <= 0) return 'No calls yet';
+
+    const itemLabel = challenge.entries.length > 1 && bestEntry?.text ? `${bestEntry.text}: ` : '';
+    if (topFact > topCap) {
+      return `🏆 Community Verdict: ${itemLabel}✅ Fact (${topFact} vote${topFact === 1 ? '' : 's'}${topCap > 0 ? ` vs ${topCap} Cap` : ''})`;
+    }
+    if (topCap > topFact) {
+      return `🏆 Community Verdict: ${itemLabel}🧢 Cap (${topCap} vote${topCap === 1 ? '' : 's'}${topFact > 0 ? ` vs ${topFact} Fact` : ''})`;
+    }
+    return `🤝 Community Verdict: ${itemLabel}Tied (${topFact} Fact · ${topCap} Cap)`;
   };
 
   const getRatingHighlight = () => {
@@ -1040,7 +1059,14 @@ function EveryoneResults({ challenge, results, onCreateOwn }: { challenge: Chall
                 const factCount = getFact(entry);
                 const capCount = getCap(entry);
                 const totalVotes = factCount + capCount;
-                const factPct = totalVotes > 0 ? Math.round((factCount / totalVotes) * 100) : 0;
+                const verdictBadge =
+                  totalVotes === 0
+                    ? { label: '0 votes', className: 'fact-cap-badge' }
+                    : factCount > capCount
+                      ? { label: `✅ Fact · ${factCount} vote${factCount === 1 ? '' : 's'}`, className: 'fact-badge' }
+                      : capCount > factCount
+                        ? { label: `🧢 Cap · ${capCount} vote${capCount === 1 ? '' : 's'}`, className: 'cap-badge' }
+                        : { label: `🤝 Tied · ${factCount} each`, className: 'fact-cap-badge' };
                 return (
                   <div className="ranking-feed-row community-feed-row fact-cap-community-row" key={entry.id}>
                     <span className="ranking-position">#{ranks[index]}</span>
@@ -1052,7 +1078,7 @@ function EveryoneResults({ challenge, results, onCreateOwn }: { challenge: Chall
                         <span className="stat-pill cap-pill">🧢 <b>{capCount}</b> Cap</span>
                       </div>
                     </div>
-                    <b className="ranking-avg-badge fact-cap-badge">{factPct}% Fact</b>
+                    <b className={`ranking-avg-badge ${verdictBadge.className}`}>{verdictBadge.label}</b>
                   </div>
                 );
               }
