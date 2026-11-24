@@ -162,8 +162,7 @@ api.post('/publish', async (c) => {
   }
   if (entries.some((entry) => entry.imageUrl && !isRedditMedia(entry.imageUrl))) return c.json({ error: 'Entry images must use a Reddit-hosted image URL.' }, 400);
   if (!validEntryCount(mode, entries.length)) return c.json({ error: `${MODE_LABELS[mode]} needs between ${MIN_ENTRIES[mode]} and ${MAX_ENTRIES_BY_MODE[mode]} complete entries.` }, 400);
-  const title = text(input.title, 80);
-  if (!title) return c.json({ error: 'Add a challenge title.' }, 400);
+  const title = text(input.title, 80) || MODE_LABELS[mode];
   const userDraftsKey = `${prefix()}drafts:${userId}`;
   const draftId = text(input.draftId, 80);
   const storedDraft = draftId ? await redis.hGet(userDraftsKey, draftId) : undefined;
@@ -208,7 +207,7 @@ api.post('/publish', async (c) => {
   challenge.postId = post.id;
   challenge.status = 'published';
 
-  // Automatically start a comment thread so player votes nest underneath it
+  // Automatically start a stickied comment thread so player votes nest underneath it
   try {
     const starterComment = await reddit.submitComment({
       id: post.id,
@@ -216,6 +215,11 @@ api.post('/publish', async (c) => {
       runAs: 'APP',
     });
     if (starterComment?.id) {
+      try {
+        await starterComment.distinguish(true);
+      } catch (distinguishErr) {
+        console.warn('Could not distinguish/sticky starter comment:', distinguishErr);
+      }
       challenge.threadCommentId = starterComment.id as `t1_${string}`;
       await redis.set(`${prefix()}thread-comment:${id}`, starterComment.id);
     }
@@ -454,6 +458,11 @@ api.post('/comment/:id', async (c) => {
         runAs: 'APP',
       });
       if (starter?.id) {
+        try {
+          await starter.distinguish(true);
+        } catch (distinguishErr) {
+          console.warn('Could not distinguish/sticky starter comment:', distinguishErr);
+        }
         threadCommentId = starter.id as `t1_${string}`;
         challenge.threadCommentId = threadCommentId;
         await redis.set(`${prefix()}thread-comment:${id}`, starter.id);

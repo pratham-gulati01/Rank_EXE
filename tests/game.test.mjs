@@ -23,7 +23,8 @@ describe('challenge mode entry validation', () => {
     assert.equal(validEntryCount('smash', 2), true);
     assert.equal(validEntryCount('smash', 1), false);
     assert.equal(validEntryCount('fact_cap', 2), true);
-    assert.equal(validEntryCount('fact_cap', 1), false);
+    assert.equal(validEntryCount('fact_cap', 1), true);
+    assert.equal(validEntryCount('fact_cap', 0), false);
     assert.equal(validEntryCount('rating', 2), true);
     assert.equal(validEntryCount('rating', 1), true);
     assert.equal(validEntryCount('rating', 0), false);

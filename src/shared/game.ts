@@ -25,7 +25,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   fact_cap: 'Fact or Cap',
   rating: 'Rating',
 };
-export const MIN_ENTRIES: Record<GameMode, number> = { rank: 2, versus: 2, kmk: 3, smash: 2, fact_cap: 2, rating: 1 };
+export const MIN_ENTRIES: Record<GameMode, number> = { rank: 2, versus: 2, kmk: 3, smash: 2, fact_cap: 1, rating: 1 };
 export const MAX_ENTRIES = 30;
 export const MAX_ENTRIES_BY_MODE: Record<GameMode, number> = { rank: 10, versus: MAX_ENTRIES, kmk: 3, smash: MAX_ENTRIES, fact_cap: MAX_ENTRIES, rating: MAX_ENTRIES };
 export const validEntryCount = (mode: GameMode, count: number): boolean => count >= MIN_ENTRIES[mode] && count <= MAX_ENTRIES_BY_MODE[mode];

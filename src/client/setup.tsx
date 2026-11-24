@@ -177,7 +177,7 @@ export const SetupApp = ({ onBack }: { onBack?: () => void } = {}) => {
   const pendingSetup = readPendingSetup();
   const [selectedMode, setSelectedMode] = useState<GameMode | null>(() => pendingSetup?.mode ?? null);
   const [mode, setMode] = useState<GameMode | null>(() => pendingSetup?.mode ?? null);
-  const [title, setTitle] = useState(() => pendingSetup?.draft ? pendingSetup.draft.title === 'Untitled draft' ? '' : pendingSetup.draft.title : pendingSetup?.mode ? MODE_LABELS[pendingSetup.mode] : '');
+  const [title, setTitle] = useState(() => pendingSetup?.draft ? pendingSetup.draft.title === 'Untitled draft' ? '' : pendingSetup.draft.title : '');
   const [description, setDescription] = useState(() => pendingSetup?.draft?.description ?? '');
   const [category, setCategory] = useState(() => pendingSetup?.draft?.category ?? 'Pop culture');
   const [entries, setEntries] = useState<ChallengeEntry[]>(() => pendingSetup?.draft?.entries.length ? pendingSetup.draft.entries.slice(0, MAX_ENTRIES_BY_MODE[pendingSetup.draft.mode]) : pendingSetup ? Array.from({ length: MIN_ENTRIES[pendingSetup.mode] }, () => ({ id: makeId(), text: '' })) : []);
@@ -232,7 +232,7 @@ export const SetupApp = ({ onBack }: { onBack?: () => void } = {}) => {
       return;
     }
     setMode(next);
-    setTitle(MODE_LABELS[next]);
+    setTitle('');
     const minimum = MIN_ENTRIES[next];
     setEntries((current) => Array.from({ length: minimum }, (_, index) => current[index] ?? { id: makeId(), text: '' }));
     setNotice('');
@@ -304,9 +304,9 @@ export const SetupApp = ({ onBack }: { onBack?: () => void } = {}) => {
       if (successfulImages.length === 0) {
         throw new Error('Upload failed. Try a smaller image or video under 20 MB.');
       }
-      const incoming = successfulImages.map(({ file, url }, index) => ({
+      const incoming = successfulImages.map(({ url }) => ({
         id: makeId(),
-        text: file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').slice(0, 180) || `Image ${index + 1}`,
+        text: '',
         imageUrl: url,
       }));
       setEntries((current) => {
@@ -341,11 +341,10 @@ export const SetupApp = ({ onBack }: { onBack?: () => void } = {}) => {
       const dataUrl = await prepareImage(file);
       const mediaType = isVideoFile(file) ? 'video' : isGifFile(file) ? 'gif' : 'image';
       const result = await request<{ imageUrl: string }>('/api/media', { method: 'POST', body: JSON.stringify({ dataUrl, type: mediaType }) });
-      const defaultText = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').slice(0, 180);
       setEntries((current) => current.map((entry) => entry.id === entryId ? {
         ...entry,
         imageUrl: result.imageUrl,
-        text: (entry.text ?? '').trim() ? entry.text : defaultText,
+        text: entry.text ?? '',
       } : entry));
       setNotice('Media attached.');
     } catch (error) {
@@ -378,15 +377,16 @@ export const SetupApp = ({ onBack }: { onBack?: () => void } = {}) => {
   };
 
   const publish = async () => {
-    if (!mode || !title.trim() || !validCount) {
-      return setNotice(!title.trim() ? 'Give your game a title.' : `Add at least ${requiredCount} entries to publish.`);
+    const finalTitle = title.trim() || (mode ? MODE_LABELS[mode] : '');
+    if (!mode || !validCount) {
+      return setNotice(`Add at least ${requiredCount} entries to publish.`);
     }
     setBusy(true);
     setNotice('Publishing your game post…');
     try {
       const result = await request<{ postUrl: string }>('/api/publish', {
         method: 'POST',
-        body: JSON.stringify({ draftId, title, description, category, mode, ...(themeEnabled ? { themeColor } : {}), entries: completeEntries }),
+        body: JSON.stringify({ draftId, title: finalTitle, description, category, mode, ...(themeEnabled ? { themeColor } : {}), entries: completeEntries }),
       });
       navigateTo(result.postUrl);
     } catch (error) {
